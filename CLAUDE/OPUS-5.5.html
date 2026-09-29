@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OPUS-5.5 - Rocket Launch</title>
+<!-- skill:chrome -->
+<style>
+/* Credit line — bottom-right */
+.design-ui-credit {
+  position: fixed;
+  bottom: 12px;
+  right: 12px;
+  font: 11px/1 system-ui, sans-serif;
+  color: rgba(128,128,128,0.5);
+  pointer-events: none;
+  z-index: 2147483647;
+  transition: opacity 0.4s ease;
+  user-select: none;
+  letter-spacing: 0.02em;
+}
+
+/* Hide chrome on touch devices */
+@media (hover: none) {
+  .design-ui-credit { display: none; }
+}
+
+/* Print fixes */
+@media print {
+  * {
+    transition: none !important;
+    animation: none !important;
+    box-shadow: none !important;
+  }
+  body {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+  .design-ui-credit { display: none !important; }
+}
+
+</style>
+<script>
+(function () {
+    // Design-ui pages are single compositions, so the whole body is editable.
+    function markEditable() {
+        document.body.classList.add('artifact-editable');
+    }
+
+    // Credit badge with idle-fade. Hover devices only.
+    function initChromeUI() {
+        if (!matchMedia('(hover: hover)').matches) return;
+
+        var credit = document.createElement('div');
+        credit.className = 'design-ui-credit';
+        credit.setAttribute('aria-hidden', 'true');
+        credit.innerHTML = '\u{1F49C} by ClickUp Brain';
+        document.body.appendChild(credit);
+
+        var timer = null;
+        var fade = function (out) { credit.style.opacity = out ? '0' : ''; };
+        fade(true);
+        var show = function () {
+            fade(false);
+            clearTimeout(timer);
+            timer = setTimeout(function () { fade(true); }, 3000);
+        };
+        document.addEventListener('mousemove', show);
+        show();
+    }
+
+    function init() {
+        markEditable();
+        initChromeUI();
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+})();
+
+</script>
+<!-- /skill:chrome -->
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+<title>Rocket Launch</title>
+<style>
+  :root { color-scheme: light; }
+  html,body { margin:0; width:100%; height:100%; overflow:hidden; background:#9bd9ff; }
+  canvas { display:block; width:100%; height:100%; }
+</style>
+</head>
+<body>
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.161.0/build/three.module.js';
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x91d7ff);
+scene.fog = new THREE.FogExp2(0x9bcde5, 0.0022);
+const renderer = new THREE.WebGLRenderer({ antialias:true, powerPreference:'high-performance' });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 1.7));
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.12;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+document.body.appendChild(renderer.domElement);
+
+const camera = new THREE.PerspectiveCamera(46, innerWidth/innerHeight, 0.1, 1600);
+const clock = new THREE.Clock();
+const temp = new THREE.Object3D();
+const launchLight = new THREE.PointLight(0xff6a25, 0, 180, 2);
+scene.add(launchLight);
+
+scene.add(new THREE.HemisphereLight(0xd9f4ff, 0x6b8e5a, 2.0));
+const sun = new THREE.DirectionalLight(0xfff5d0, 3.2);
+sun.position.set(-80,120,70); sun.castShadow = true; sun.shadow.mapSize.set(2048,2048);
+sun.shadow.camera.left=-170; sun.shadow.camera.right=170; sun.shadow.camera.top=170; sun.shadow.camera.bottom=-170;
+scene.add(sun);
+
+const mat = (color, rough=0.7, metal=0) => new THREE.MeshStandardMaterial({color, roughness:rough, metalness:metal});
+const white = mat(0xe9f4f2, .42, .25), blue = mat(0x2857a6,.34,.55), red = mat(0xe74939,.38,.35), dark = mat(0x243447,.3,.72), yellow = mat(0xffc52b,.48,.25), concrete = mat(0x7d8e91,.95,0), grass = mat(0x4caa68,.96,0), orange = mat(0xff6a1b,.38,.12);
+
+function box(w,h,d, m, x=0,y=0,z=0, bevel=0){
+  const g = bevel ? new THREE.BoxGeometry(w,h,d,2,2,2) : new THREE.BoxGeometry(w,h,d);
+  const o = new THREE.Mesh(g,m); o.position.set(x,y,z); o.castShadow=o.receiveShadow=true; scene.add(o); return o;
+}
+function cyl(r,h,m,x=0,y=0,z=0,seg=16){ const o=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,seg),m);o.position.set(x,y,z);o.castShadow=o.receiveShadow=true;scene.add(o);return o; }
+function sphere(r,m,x=0,y=0,z=0){ const o=new THREE.Mesh(new THREE.SphereGeometry(r,16,12),m);o.position.set(x,y,z);o.castShadow=o.receiveShadow=true;scene.add(o);return o; }
+
+// Ground layers and colorful terrain
+box(420,2,420, grass, 0,-1.1,0);
+for(let i=0;i<16;i++){
+  const a=i/16*Math.PI*2, r=140+Math.random()*40, h=12+Math.random()*23;
+  const hill=sphere(1, mat(new THREE.Color().setHSL(.28+Math.random()*.12,.48,.37),1,0), Math.cos(a)*r, h*.35-2, Math.sin(a)*r);
+  hill.scale.set(22+Math.random()*25,h,18+Math.random()*22);
+}
+const pad = box(34,1.5,34, concrete, 0,0,0);
+box(28,.3,28, mat(0x465c62,.85), 0,.9,0);
+for(let x=-13;x<=13;x+=6){ box(.28,.28,28,yellow,x,1.08,0); box(28,.28,.28,yellow,0,1.09,x); }
+for(let i=0;i<12;i++){ const a=i*Math.PI/6; cyl(.38,.7,dark,Math.cos(a)*12,1.55,Math.sin(a)*12,10); }
+
+// Pipes and industrial equipment
+for(let i=0;i<7;i++){
+  const x=-30+i*4.5; box(2.5,4+Math.random()*4,3.5, dark,x,2.2,-19); box(3, .35,4, yellow,x,4.4+Math.random()*3,-19);
+  cyl(.17,12, orange, x-1.25,5,-19,10).rotation.z=Math.PI/2;
+}
+for(let i=0;i<10;i++){ const x=-50+i*10; cyl(.55,1.2,red,x,.6,18,12); box(1.8,1.5,1.8,blue,x,1.5,18); }
+for(let i=0;i<28;i++){ const a=i/28*Math.PI*2, r=31+Math.random()*8; box(.35,1.2,.35, yellow,Math.cos(a)*r,.6,Math.sin(a)*r); }
+
+// Launch tower
+const tower = new THREE.Group(); scene.add(tower); tower.position.set(10,0,0);
+for(const x of [-4,4]) for(const z of [-3,3]) { const leg=box(.8,48,.8,dark,x,25,z); tower.add(leg); }
+for(let y=4;y<49;y+=5){ for(const x of [-4,4]){ const beam=box(8,.35,.35,dark,0,y,-3); tower.add(beam); } for(const z of [-3,3]){const beam=box(.35,.35,6,dark,4,y,0); tower.add(beam);} }
+for(let y=6;y<46;y+=8){ const cross=box(8,.22,.22,blue,0,y,0); cross.rotation.z=.5; tower.add(cross); }
+for(let i=0;i<4;i++){ const lamp=sphere(.32,mat(0xff3224,.25,.1),6.7,8+i*9,3.6); lamp.userData.lamp=true; tower.add(lamp); }
+
+// Rocket rig group
+const rig = new THREE.Group(); scene.add(rig); rig.position.y=0;
+const rocket = new THREE.Group(); rig.add(rocket);
+const body = new THREE.Mesh(new THREE.CylinderGeometry(3.25,3.65,30,32), white); body.position.y=22; body.castShadow=body.receiveShadow=true; rocket.add(body);
+const nose = new THREE.Mesh(new THREE.ConeGeometry(3.25,8.2,32), white); nose.position.y=41; nose.castShadow=true; rocket.add(nose);
+const collar = new THREE.Mesh(new THREE.CylinderGeometry(3.78,3.78,.8,32), red); collar.position.y=31; rocket.add(collar);
+for(let i=0;i<5;i++){ const p=box(.18,8,1.6,blue,3.28,10+i*5,-1.2); p.rotation.z=.02; rocket.add(p); }
+for(let i=0;i<4;i++){ const a=i*Math.PI/2; const f=new THREE.Mesh(new THREE.ConeGeometry(2.6,8,4),red); f.scale.set(.8,1.2,.22); f.position.set(Math.cos(a)*3.5,10,Math.sin(a)*3.5); f.rotation.x=Math.PI/2; f.rotation.y=-a; f.castShadow=true; rocket.add(f); }
+for(let i=0;i<4;i++){ const a=i*Math.PI/2; const ring=new THREE.Mesh(new THREE.TorusGeometry(2.5,.16,8,20),dark); ring.rotation.x=Math.PI/2; ring.position.y=15+i*5; rocket.add(ring); }
+for(let i=0;i<4;i++){ const a=i*Math.PI/2; const eng=new THREE.Mesh(new THREE.CylinderGeometry(.85,.58,1.9,18),dark); eng.position.set(Math.cos(a)*1.55,6,Math.sin(a)*1.55); rocket.add(eng); }
+const windowMat=mat(0x38c1e2,.15,.5); for(let i=0;i<6;i++){ const w=sphere(.46,windowMat,Math.cos(i*Math.PI/3)*2.15,27,Math.sin(i*Math.PI/3)*2.15); rocket.add(w); }
+
+// Clamps
+const clamps=[]; for(const z of [-3.9,3.9]){ const arm=box(7,.75,.7,yellow,6,24,z); arm.userData.baseZ=z; clamps.push(arm); }
+
+// Flame sprite texture
+function glowTexture(inner='#fff8bf', mid='#ffb020', outer='#f33b14'){
+ const c=document.createElement('canvas'); c.width=c.height=128; const x=c.getContext('2d'); const g=x.createRadialGradient(64,64,2,64,64,64); g.addColorStop(0,inner);g.addColorStop(.25,mid);g.addColorStop(.65,outer);g.addColorStop(1,'rgba(220,35,8,0)'); x.fillStyle=g;x.fillRect(0,0,128,128); return new THREE.CanvasTexture(c);
+}
+const flameTex=glowTexture();
+const fireMat=new THREE.SpriteMaterial({map:flameTex,transparent:true,blending:THREE.AdditiveBlending,depthWrite:false});
+const flames=[];
+for(let i=0;i<24;i++){ const s=new THREE.Sprite(fireMat.clone()); s.userData.seed=Math.random()*8; s.position.set((Math.random()-.5)*2.7,5.2-Math.random()*2.4,(Math.random()-.5)*2.7); s.scale.set(4+Math.random()*3,8+Math.random()*8,1); rocket.add(s); flames.push(s); }
+
+// Smoke and dust particles
+const smokeTex=glowTexture('rgba(255,255,255,.8)','rgba(190,205,205,.65)','rgba(110,130,135,.1)');
+const smokeMat=new THREE.SpriteMaterial({map:smokeTex,transparent:true,opacity:.66,depthWrite:false});
+const smoke=[];
+for(let i=0;i<110;i++){ const s=new THREE.Sprite(smokeMat.clone()); const a=Math.random()*Math.PI*2, r=Math.random()*4; s.position.set(Math.cos(a)*r,2+Math.random()*14,Math.sin(a)*r); s.userData={a,r,seed:Math.random()*10,baseY:s.position.y}; s.scale.setScalar(3+Math.random()*5); scene.add(s); smoke.push(s); }
+const dust=[];
+for(let i=0;i<160;i++){ const p=new THREE.Mesh(new THREE.SphereGeometry(.08+Math.random()*.14,5,5),mat(0xc9ad78,1,0)); p.userData={a:Math.random()*Math.PI*2,r:Math.random()*2,v:.2+Math.random()*.8,seed:Math.random()*10}; scene.add(p); dust.push(p); }
+const sparks=[];
+for(let i=0;i<70;i++){ const p=new THREE.Mesh(new THREE.SphereGeometry(.06,5,5),mat(0xffc42f,.25,.1)); p.userData={seed:Math.random()*10}; scene.add(p); sparks.push(p); }
+
+// Clouds at several atmospheric bands
+function cloud(x,y,z,s){ const g=new THREE.Group(); for(let i=0;i<7;i++){ const c=sphere(1,mat(0xf3fbff,1,0),x+(Math.random()-.5)*s*1.7,y+(Math.random()-.5)*s*.35,z+(Math.random()-.5)*s*1.2); c.castShadow=false; c.receiveShadow=false; c.scale.set(s*(.7+Math.random()*.7),s*(.45+Math.random()*.55),s*(.65+Math.random()*.8)); g.add(c); } return g; }
+const clouds=[]; for(let i=0;i<18;i++){ const c=cloud((Math.random()-.5)*220,45+Math.random()*90,(Math.random()-.5)*180,4+Math.random()*7); scene.add(c); clouds.push(c); }
+
+// Vegetation reacting to exhaust
+const grassBlades=[]; for(let i=0;i<150;i++){ const a=Math.random()*Math.PI*2,r=18+Math.random()*26; const b=box(.12,1+Math.random(),.12,grass,Math.cos(a)*r,.5,Math.sin(a)*r); b.userData={a,baseX:b.rotation.x,baseZ:b.rotation.z,seed:Math.random()*5}; grassBlades.push(b); }
+
+let start=clock.getElapsedTime();
+function animCurve(t){ return Math.max(0,Math.min(1,t)); }
+function animate(){
+ requestAnimationFrame(animate); const now=clock.getElapsedTime(); const t=(now-start)%34;
+ const ignition=animCurve((t-3)/6), thrust=animCurve((t-8)/5), lift=animCurve((t-13)/15);
+ const easedLift=lift*lift*(3-2*lift);
+ const rocketY=easedLift*62;
+ const tremble=(ignition*0.14+thrust*.26)*Math.sin(now*42)*.25;
+ rig.position.y=rocketY+tremble;
+ rig.rotation.z=tremble*.45; rig.rotation.x=Math.sin(now*31)*tremble*.3;
+ // release clamps in the final ignition beat
+ clamps.forEach((a,i)=>{ a.position.z=THREE.MathUtils.lerp(a.userData.baseZ, a.userData.baseZ+(i?5:-5), animCurve((t-11)/2)); a.rotation.y=Math.sin(now*2+i)*.04; });
+ const flamePower=.08+ignition*.85+thrust*.8;
+ flames.forEach((s,i)=>{ const pulse=1+Math.sin(now*18+s.userData.seed)*.18; s.visible=flamePower>.1; s.position.y=5.4-(i%4)*.45 + Math.sin(now*9+i)*.16; s.scale.set((4+flamePower*2)*pulse,(6+flamePower*19)*pulse,1); s.material.opacity=.38+flamePower*.48; });
+ launchLight.intensity=flamePower*15; launchLight.position.set(0,5+rocketY,0);
+ // smoke rolls outward and rises from the pad
+ smoke.forEach((s,i)=>{ const d=s.userData; const spread=(1+thrust*5+easedLift*3); d.r += .002+thrust*.018; s.position.x=Math.cos(d.a+now*.08+d.seed)*d.r*spread; s.position.z=Math.sin(d.a+now*.08+d.seed)*d.r*spread; s.position.y=2+d.baseY+(now*.25+d.seed)%18; const k=1+thrust*.7; s.scale.setScalar((3+((i*7)%5))*k); s.material.opacity=.15+Math.max(0,1-(s.position.y/24))*.48; });
+ dust.forEach((p,i)=>{ const d=p.userData; const rr=d.r+thrust*(now%8)*d.v*2; p.position.set(Math.cos(d.a)*rr, .25+(now*d.v*1.8+d.seed)%7, Math.sin(d.a)*rr); p.material.opacity=.45; });
+ sparks.forEach((p,i)=>{ const q=p.userData; const a=q.seed+now*(1.3+(i%4)*.2); const rr=.8+((now*1.8+q.seed)%3)*(1+thrust*3); p.position.set(Math.cos(a)*rr,4+(now*3+q.seed)%9,Math.sin(a)*rr); p.visible=flamePower>.25; });
+ grassBlades.forEach((b,i)=>{ const d=b.userData; const push=thrust*.45*Math.max(0,1-d.a%1); b.rotation.z=Math.sin(now*5+d.seed)*.12+push*Math.cos(d.a); b.rotation.x=Math.cos(now*4+d.seed)*.08+push*Math.sin(d.a); });
+ clouds.forEach((c,i)=>{ c.position.x += Math.sin(now*.02+i)*.003; });
+ // cinematic follow camera, keeping rocket prominent with landscape reveal
+ const targetY=18+rocketY*.78; const camY=18+rocketY*.65; const camZ=86-rocketY*.18;
+ const shake=(ignition*.35+thrust*.75)*Math.sin(now*25)*.32 + lift*.08*Math.sin(now*11);
+ camera.position.lerp(new THREE.Vector3(58+shake,camY+shake*.4,camZ),.055);
+ camera.lookAt(new THREE.Vector3(0,targetY,0));
+ renderer.render(scene,camera);
+}
+animate();
+addEventListener('resize',()=>{ camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth,innerHeight); });
+</script>
+</body>
+</html>
