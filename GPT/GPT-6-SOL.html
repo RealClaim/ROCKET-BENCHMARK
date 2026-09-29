@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="en">
+<head>
+<!-- skill:chrome -->
+<style>
+/* Credit line — bottom-right */
+.design-ui-credit {
+  position: fixed;
+  bottom: 12px;
+  right: 12px;
+  font: 11px/1 system-ui, sans-serif;
+  color: rgba(128,128,128,0.5);
+  pointer-events: none;
+  z-index: 2147483647;
+  transition: opacity 0.4s ease;
+  user-select: none;
+  letter-spacing: 0.02em;
+}
+
+/* Hide chrome on touch devices */
+@media (hover: none) {
+  .design-ui-credit { display: none; }
+}
+
+/* Print fixes */
+@media print {
+  * {
+    transition: none !important;
+    animation: none !important;
+    box-shadow: none !important;
+  }
+  body {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+  .design-ui-credit { display: none !important; }
+}
+
+</style>
+<script>
+(function () {
+    // Design-ui pages are single compositions, so the whole body is editable.
+    function markEditable() {
+        document.body.classList.add('artifact-editable');
+    }
+
+    // Credit badge with idle-fade. Hover devices only.
+    function initChromeUI() {
+        if (!matchMedia('(hover: hover)').matches) return;
+
+        var credit = document.createElement('div');
+        credit.className = 'design-ui-credit';
+        credit.setAttribute('aria-hidden', 'true');
+        credit.innerHTML = '\u{1F49C} by ClickUp Brain';
+        document.body.appendChild(credit);
+
+        var timer = null;
+        var fade = function (out) { credit.style.opacity = out ? '0' : ''; };
+        fade(true);
+        var show = function () {
+            fade(false);
+            clearTimeout(timer);
+            timer = setTimeout(function () { fade(true); }, 3000);
+        };
+        document.addEventListener('mousemove', show);
+        show();
+    }
+
+    function init() {
+        markEditable();
+        initChromeUI();
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+})();
+
+</script>
+<!-- /skill:chrome -->
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>Rocket Launch</title>
+<style>html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#8bd8f3}canvas{display:block;width:100%;height:100%;outline:0}</style>
+</head>
+<body>
+<script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
+<script>
+(()=>{
+'use strict';
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x80cdf3);scene.fog=new THREE.FogExp2(0xa9d9dd,.0026);
+const camera=new THREE.PerspectiveCamera(43,innerWidth/innerHeight,.1,2200);
+const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
+renderer.setPixelRatio(Math.min(devicePixelRatio,1.8));renderer.setSize(innerWidth,innerHeight);
+renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.55;
+document.body.appendChild(renderer.domElement);
+const C={cream:0xf3f2df,white:0xeef7ef,orange:0xff6238,red:0xe44338,blue:0x126b9d,navy:0x1e465e,teal:0x48a79f,metal:0x638390,gold:0xf3bf65,dark:0x374e58};
+const mat=(color,metalness=0,roughness=.65,extra={})=>new THREE.MeshStandardMaterial({color,metalness,roughness,...extra});
+const M={white:mat(C.white,.16,.34),cream:mat(C.cream,.07,.65),red:mat(C.red,.22,.42),orange:mat(C.orange,.18,.45),blue:mat(C.blue,.35,.38),navy:mat(C.navy,.4,.36),teal:mat(C.teal,.12,.8),metal:mat(C.metal,.73,.33),dark:mat(C.dark,.5,.45),gold:mat(C.gold,.58,.3),soil:mat(0xc59d76,0,1),grass:mat(0x83bc88,0,1),pad:mat(0x758e91,.1,.87),line:mat(0xe7d6a4,0,.85),glass:mat(0x79dce6,.32,.15,{emissive:0x267d9a,emissiveIntensity:.25})};
+const hemisphere=new THREE.HemisphereLight(0xe6f8ff,0x857258,2.1);scene.add(hemisphere);
+const sun=new THREE.DirectionalLight(0xfff1ce,3.35);sun.position.set(-75,120,55);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=-115;sun.shadow.camera.right=115;sun.shadow.camera.top=150;sun.shadow.camera.bottom=-115;sun.shadow.camera.near=.5;sun.shadow.camera.far=340;sun.shadow.bias=-.00025;sun.shadow.normalBias=.025;scene.add(sun);
+const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));const smooth=(a,b,x)=>{let q=clamp((x-a)/(b-a),0,1);return q*q*(3-2*q)};
+let seed=927443;function rand(){seed=(1664525*seed+1013904223)>>>0;return seed/4294967296}
+function mesh(g,m,parent=scene,x=0,y=0,z=0,shadow=true){const o=new THREE.Mesh(g,m);o.position.set(x,y,z);if(shadow){o.castShadow=true;o.receiveShadow=true}parent.add(o);return o}
+function box(parent,w,h,d,x,y,z,m){return mesh(new THREE.BoxGeometry(w,h,d),m,parent,x,y,z)}
+function cyl(parent,r1,r2,h,x,y,z,m,n=28){return mesh(new THREE.CylinderGeometry(r1,r2,h,n),m,parent,x,y,z)}
+function ball(parent,r,x,y,z,m,segments=12){return mesh(new THREE.SphereGeometry(r,segments,9),m,parent,x,y,z)}
+function beam(parent,a,b,r,m,n=7){let d=new THREE.Vector3().subVectors(b,a),o=mesh(new THREE.CylinderGeometry(r,r,d.length(),n),m,parent);o.position.copy(a).addScaledVector(d,.5);o.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.normalize());return o}
+// Warm landscaped coast and launch plateau.
+mesh(new THREE.PlaneGeometry(2200,2200),mat(0x9bc3a1,0,1),scene,0,-.95,0).rotation.x=-Math.PI/2;
+const ground=mesh(new THREE.CylinderGeometry(69,74,2,80),M.soil,scene,0,0,0);ground.receiveShadow=true;
+mesh(new THREE.CylinderGeometry(67.9,68,0.22,80),M.grass,scene,0,1.12,0);
+for(let i=0;i<46;i++){const a=i*2.3999,dist=77+rand()*205;let h=4+rand()*15;let hill=mesh(new THREE.SphereGeometry(1,12,8),mat([0x69aa9e,0x82b998,0x99bb93,0x89b6ad][i%4],0,1),scene,Math.cos(a)*dist,-1,Math.sin(a)*dist);hill.scale.set(15+rand()*32,h,12+rand()*25);hill.receiveShadow=true}
+for(let i=0;i<70;i++){let a=rand()*Math.PI*2,d=25+rand()*43;let r=.3+rand()*1.1;ball(scene,r,Math.cos(a)*d,1.1,Math.sin(a)*d,rand()>.45?M.grass:M.teal,8).scale.y=.35}
+const road=mesh(new THREE.RingGeometry(15,20.5,96),mat(0x637d83,0,.96),scene,0,1.27,0);road.rotation.x=-Math.PI/2;road.receiveShadow=true;
+for(let i=0;i<28;i++){let a=i*Math.PI*2/28;let dash=box(scene,.14,.025,1.45,Math.sin(a)*17.8,1.297,Math.cos(a)*17.8,M.line);dash.rotation.y=a}
+const platform=cyl(scene,11.7,12.5,1.5,0,1.6,0,M.pad,12);
+cyl(scene,9.65,10.5,.32,0,2.54,0,M.dark,16);cyl(scene,5.1,5.4,.25,0,2.79,0,M.metal,16);
+for(let i=0;i<12;i++){let a=i*Math.PI/6;box(scene,1.4,.11,3.7,Math.sin(a)*7.6,2.75,Math.cos(a)*7.6,M.metal).rotation.y=a}
+for(let i=0;i<16;i++){let a=i*Math.PI/8;cyl(scene,.13,.13,.18,Math.sin(a)*10.3,2.53,Math.cos(a)*10.3,M.gold,8)}
+// Flame trench, blast deflectors and gantry hardware.
+box(scene,4.9,1.1,10.5,0,2.45,0,M.dark);
+for(const s of [-1,1]){let wedge=box(scene,3.8,.38,8,s*3.5,3.1,0,M.metal);wedge.rotation.z=s*.28}
+for(let i=0;i<4;i++){let z=-7.5+i*5;box(scene,2,.18,.3,0,3.1,z,M.gold)}
+function pipe(points,r=.22,material=M.blue){for(let j=0;j<points.length-1;j++)beam(scene,new THREE.Vector3(...points[j]),new THREE.Vector3(...points[j+1]),r,material,9);points.slice(1,-1).forEach(p=>ball(scene,r*1.15,...p,material,10))}
+pipe([[-33,1.5,-9],[-23,1.5,-9],[-23,3.1,-9],[-12,3.1,-9],[-12,4.5,-5]],.25,M.blue);
+pipe([[31,1.5,14],[25,1.5,14],[25,2.8,11],[12,2.8,11],[9,4.5,9]],.21,M.orange);
+pipe([[-28,1.5,-13],[-28,4,-13],[-22,4,-13],[-22,1.5,-13]],.13,M.gold);
+for(let j=0;j<6;j++){let x=-31+j*2.8;let tank=cyl(scene,.85,.85,2.5,x,2.4,-22,M.white,16);ball(scene,.85,x,3.65,-22,M.white,12);for(let k of [-.58,.58])box(scene,.15,1.9,.15,x+k,2,-22,M.metal)}
+for(let i=0;i<13;i++){let a=i*Math.PI*2/13,r=24+rand()*8;let x=Math.cos(a)*r,z=Math.sin(a)*r;let lamp=box(scene,.38,.38,.38,x,3.9,z,mat(0xffaa54,0,.4,{emissive:0xff721f,emissiveIntensity:1.5}));cyl(scene,.08,.1,2.7,x,2.44,z,M.dark,7);lamp.userData.phase=i*.77}
+for(let i=0;i<14;i++){let a=i*Math.PI*2/14;let x=Math.cos(a)*13.3,z=Math.sin(a)*13.3;box(scene,.9,1.1,.4,x,1.72,z,i%3===0?M.orange:M.cream).rotation.y=-a}
+// Lattice service tower, decks, cross-bracing, floodlights and articulated umbilicals.
+const tower=new THREE.Group();tower.position.set(-8.8,1.25,-1.6);scene.add(tower);
+for(let h=0;h<8;h++){let y=h*4.2;for(let sx of [-1,1])for(let sz of [-1,1]){box(tower,.34,4.3,.34,sx*2.1,y+2.1,sz*1.55,M.navy);if(h<7){beam(tower,new THREE.Vector3(sx*2.1,y,sz*1.55),new THREE.Vector3(-sx*2.1,y+4.2,sz*1.55),.10,M.metal)}}for(let sx of [-1,1]){beam(tower,new THREE.Vector3(sx*2.1,y,1.55),new THREE.Vector3(sx*2.1,y+4.2,-1.55),.09,M.metal)}box(tower,4.7,.17,3.55,0,y+.2,0,h%2?M.metal:M.dark);if(h%2===0){box(tower,4.6,.13,.15,0,y+1.2,1.6,M.gold)}}
+box(tower,6,.5,4.1,0,34,0,M.navy);for(let i=0;i<3;i++){box(tower,.12,1.3,.12,-1.6+i*1.6,34.9,0,M.metal);ball(tower,.17,-1.6+i*1.6,35.6,0,M.orange)}
+for(let i=0;i<5;i++){let y=6+i*5.3;box(tower,2.8,.2,2.3,-3.2,y,0,M.metal);for(let k=0;k<5;k++)box(tower,.07,.9,.07,-4.5+k*.65,y+.5,1.12,M.gold)}
+const arms=[];for(let y of [9.3,19.1,27.5]){let pivot=new THREE.Group();pivot.position.set(2.15,y,0);tower.add(pivot);box(pivot,6.2,.35,.55,3.05,0,0,M.metal);beam(pivot,new THREE.Vector3(.1,-1.2,0),new THREE.Vector3(5.8,0,0),.13,M.gold);box(pivot,.7,1.1,1.9,6.15,0,0,M.orange);cyl(pivot,.28,.28,.8,0,0,0,M.gold,12).rotation.x=Math.PI/2;arms.push(pivot)}
+for(let i=0;i<2;i++){const y=15+i*13;let bulb=ball(tower,.3,2.5,y,1.6,mat(0xffbd59,0,.35,{emissive:0xff6420,emissiveIntensity:2}));bulb.userData.blink=i;}
+for(let i=0;i<3;i++){let x=-4.3+i*4.3;box(tower,.18,.7,.18,x,34.5,2.15,M.dark);let f=box(tower,.95,.52,.23,x,34.8,2.15,mat(0xf9f4db,0,.35,{emissive:0xffe9ba,emissiveIntensity:1.3}));f.rotation.x=-.3}
+// Silos, utility boxes, barriers and distant service roads.
+for(let i=0;i<5;i++){let x=24+i*3.7,z=-20+(i%2)*4;let height=4+rand()*2;cyl(scene,1.05,1.05,height,x,1.15+height/2,z,i%2?M.white:M.teal,15);cyl(scene,1.13,1.13,.15,x,1.2+height,z,M.metal,15);box(scene,2.5,.22,2.5,x,1.34,z,M.dark)}
+for(let i=0;i<7;i++){let x=-36+i*5.5;box(scene,3.8,1.1,1.8,x,1.9,28,M.white);box(scene,3.98,.15,2,x,2.55,28,i%2?M.blue:M.orange)}
+for(let i=0;i<60;i++){let a=rand()*Math.PI*2,d=31+rand()*30,x=Math.sin(a)*d,z=Math.cos(a)*d;if(x<-6&&x>-15&&Math.abs(z)<9)continue;let h=.3+rand()*.55;let shrub=ball(scene,.5+rand()*.5,x,1.25+h*.4,z,i%3?M.teal:M.grass,7);shrub.scale.y=.55}
+const blades=[];const bladeGeo=new THREE.ConeGeometry(.11,1,3);const bladeMat=mat(0x53a979,0,1,{side:THREE.DoubleSide});const grassInst=new THREE.InstancedMesh(bladeGeo,bladeMat,520);scene.add(grassInst);grassInst.receiveShadow=true;const dummy=new THREE.Object3D();for(let i=0;i<520;i++){let a=rand()*6.283,d=21+rand()*44;let x=Math.sin(a)*d,z=Math.cos(a)*d;let scale=.5+rand()*.9;blades.push({x,z,scale,phase:rand()*6.28});dummy.position.set(x,1.4,z);dummy.scale.set(scale,scale,scale);dummy.rotation.z=0;dummy.updateMatrix();grassInst.setMatrixAt(i,dummy.matrix)}grassInst.instanceMatrix.needsUpdate=true;
+// Fully modeled launch vehicle in local coordinates. The whole assembly moves together.
+const rocket=new THREE.Group();scene.add(rocket);rocket.position.y=0;
+const body=cyl(rocket,2.05,2.05,17.2,0,14.05,0,M.white,48);
+cyl(rocket,2.18,2.18,.42,0,5.72,0,M.navy,48);cyl(rocket,2.12,2.12,.42,0,10.15,0,M.blue,48);
+cyl(rocket,2.13,2.13,.18,0,18.05,0,M.metal,48);cyl(rocket,2.12,2.12,.22,0,22.3,0,M.red,48);
+// Shoulder and slender fairing.
+cyl(rocket,1.92,2.05,2.1,0,23.7,0,M.cream,48);
+let tip=mesh(new THREE.ConeGeometry(1.92,5.1,48),M.orange,rocket,0,27.25,0);tip.castShadow=true;
+cyl(rocket,.31,.31,.75,0,30.1,0,M.metal,18);ball(rocket,.32,0,30.5,0,M.gold,12);
+for(let j=0;j<10;j++){let y=7+j*1.48;cyl(rocket,2.063,2.063,.035,0,y,0,j%2?M.cream:M.metal,48)}
+for(let a=0;a<4;a++){let ang=a*Math.PI/2;let finShape=new THREE.Shape();finShape.moveTo(1.8,4.65);finShape.lineTo(4.05,4.35);finShape.lineTo(3.18,7.8);finShape.lineTo(1.9,9.6);finShape.closePath();let geo=new THREE.ExtrudeGeometry(finShape,{depth:.24,bevelEnabled:true,bevelThickness:.06,bevelSize:.08,bevelSegments:2});geo.translate(0,0,-.12);let f=mesh(geo,a%2?M.blue:M.orange,rocket);f.rotation.y=ang;let rib=box(rocket,.1,3.5,.09,2.13,6.45,0,M.gold);rib.rotation.y=ang;rib.position.set(Math.cos(ang)*2.13,6.45,-Math.sin(ang)*2.13)}
+for(let i=0;i<4;i++){let a=i*Math.PI/2;for(let j=0;j<3;j++){let y=13.1+j*2.25;let p=ball(rocket,.28,Math.sin(a)*2.04,y,Math.cos(a)*2.04,M.glass,14);p.scale.set(1,.8,.28);p.rotation.y=a;let ring=cyl(rocket,.37,.37,.055,Math.sin(a)*2.055,y,Math.cos(a)*2.055,M.gold,20);ring.rotation.x=Math.PI/2;ring.rotation.z=-a}}
+// Colored longitudinal raceways and small access panels.
+for(let s of [-1,1]){box(rocket,.13,12,.23,s*1.45,15.2,1.48,M.blue);for(let i=0;i<6;i++)box(rocket,.33,.19,.08,s*1.28,9+i*2.05,1.84,M.metal)}
+for(let i=0;i<4;i++){let a=(i+.5)*Math.PI/2,x=Math.sin(a)*1.1,z=Math.cos(a)*1.1;cyl(rocket,.62,.9,1.15,x,4.42,z,M.metal,20);let bell=cyl(rocket,.95,.52,1.2,x,3.5,z,M.dark,24);cyl(rocket,.69,.69,.1,x,2.89,z,mat(0xeea853,.5,.4,{emissive:0xff5b0c,emissiveIntensity:.2}),24);for(let j=0;j<8;j++){let q=j*Math.PI/4;beam(rocket,new THREE.Vector3(x+Math.sin(q)*.58,4.38,z+Math.cos(q)*.58),new THREE.Vector3(x+Math.sin(q)*.83,3.08,z+Math.cos(q)*.83),.045,M.metal,5)}}
+// Custom layered turbulent flame, anchored below the engine bells.
+const flameGeo=(()=>{let positions=[],uvs=[],indices=[],N=24,L=24;for(let j=0;j<=L;j++){let v=j/L,r=.48+1.65*Math.pow(v,.8);for(let i=0;i<=N;i++){let a=2*Math.PI*i/N;positions.push(Math.cos(a)*r,-v,Math.sin(a)*r);uvs.push(i/N,v)}}for(let j=0;j<L;j++)for(let i=0;i<N;i++){let k=j*(N+1)+i;indices.push(k,k+N+1,k+1,k+1,k+N+1,k+N+2)}let g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(uvs,2));g.setIndex(indices);g.computeVertexNormals();return g})();
+const flameVertex=`uniform float uTime; varying vec2 vUv; varying float vFlutter; void main(){vUv=uv;vec3 p=position;float f=sin(p.y*30.0+uTime*19.0+atan(p.z,p.x)*5.0)*0.09+sin(p.y*49.0-uTime*27.0+atan(p.z,p.x)*9.0)*0.045;p.xz*=1.0+f*uv.y;p.x+=uv.y*uv.y*(sin(uTime*2.6+p.y*7.0)*0.23+sin(p.y*17.0+uTime*9.0)*0.10);p.z+=uv.y*uv.y*cos(uTime*2.0+p.y*9.0)*0.22;vFlutter=f;gl_Position=projectionMatrix*modelViewMatrix*vec4(p,1.0);}`;
+const flameFragment=`uniform float uTime;uniform float uPower;uniform float uLayer;varying vec2 vUv;varying float vFlutter;void main(){float v=vUv.y;float edge=pow(max(0.0,1.0-v),.35);float stripe=sin(v*105.0-uTime*32.0+vUv.x*36.0)*.095;vec3 hot=vec3(1.0,.99,.79),mid=vec3(1.0,.60,.14),outer=vec3(1.0,.18,.045);vec3 col=mix(hot,mid,smoothstep(.02,.5,v+uLayer*.18));col=mix(col,outer,smoothstep(.35,.98,v+uLayer*.12));float alpha=(.74-uLayer*.14)*edge*(.84+stripe+vFlutter)*uPower;alpha*=smoothstep(1.0,.68,v);gl_FragColor=vec4(col,clamp(alpha,0.0,1.0));}`;
+const flameGroup=new THREE.Group();flameGroup.position.y=2.97;rocket.add(flameGroup);const flames=[];
+for(let i=0;i<3;i++){let u={uTime:{value:0},uPower:{value:0},uLayer:{value:i}};let f=mesh(flameGeo,new THREE.ShaderMaterial({uniforms:u,vertexShader:flameVertex,fragmentShader:flameFragment,transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide}),flameGroup,0,0,0,false);f.scale.setScalar(1+i*.28);flames.push({mesh:f,u})}
+const engineLight=new THREE.PointLight(0xff7827,0,41,1.35);engineLight.position.set(0,2,0);rocket.add(engineLight);const groundLight=new THREE.PointLight(0xffa343,0,22,1.6);groundLight.position.set(0,3.8,0);scene.add(groundLight);
+function radialTexture(){let c=document.createElement('canvas');c.width=c.height=128;let ctx=c.getContext('2d'),img=ctx.createImageData(128,128);for(let y=0;y<128;y++)for(let x=0;x<128;x++){let dx=(x-63.5)/63.5,dy=(y-63.5)/63.5,r=Math.sqrt(dx*dx+dy*dy);let n=(Math.sin(x*.47+y*.23)*Math.cos(y*.51-x*.28)+Math.sin(x*.19-y*.41))*.075;let a=Math.pow(clamp((1-r+n)*1.6,0,1),1.65);let k=(y*128+x)*4;img.data[k]=250;img.data[k+1]=250;img.data[k+2]=250;img.data[k+3]=Math.round(a*255)}ctx.putImageData(img,0,0);let t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t}const puffTex=radialTexture();
+const smoke=[];function newPuff(){let s=new THREE.Sprite(new THREE.SpriteMaterial({map:puffTex,color:0xd9d2bd,transparent:true,opacity:0,depthWrite:false}));scene.add(s);let p={s,life:0,max:1,velocity:new THREE.Vector3(),base:1,spin:0,type:0};smoke.push(p);return p}for(let i=0;i<250;i++)newPuff();let smokeIndex=0;
+function emitSmoke(x,y,z,intensity,kind=0){let p=smoke[smokeIndex++%smoke.length];p.s.position.set(x,y,z);p.life=0;p.max=kind===2?3.2+rand()*3:3+rand()*5;p.base=(kind===2?2.8:2.2)+(rand()*2.8)+intensity*1.6;p.velocity.set((x?Math.sign(x):rand()-.5)*(.5+rand()*2.2)*intensity+(rand()-.5)*.9,kind===2?.5+rand()*1.2:.35+rand()*.85,(z?Math.sign(z):rand()-.5)*(.5+rand()*2.2)*intensity+(rand()-.5)*.9);p.spin=(rand()-.5)*1.7;p.s.material.color.setHex(kind===2?0xc9a988:kind===1?0xa7a9a5:0xd5d3c9);p.s.material.opacity=0;p.s.scale.setScalar(p.base);p.type=kind;p.s.material.rotation=rand()*6.28}
+// Sparks and embers are recycled, not allocated per frame.
+const sparkMat=[new THREE.MeshBasicMaterial({color:0xfff5b2,transparent:true,depthWrite:false}),new THREE.MeshBasicMaterial({color:0xff8637,transparent:true,depthWrite:false})];
+const sparks=[];const sparkGeo=new THREE.SphereGeometry(.095,5,4);for(let i=0;i<90;i++){let o=mesh(sparkGeo,sparkMat[i%2],scene,0,-100,0,false);sparks.push({o,life:0,max:1,v:new THREE.Vector3()})}let sparkIndex=0;
+function emitSpark(x,y,z){let p=sparks[sparkIndex++%sparks.length];p.o.position.set(x,y,z);p.life=0;p.max=.45+rand()*1.35;p.v.set((rand()-.5)*11,rand()*6-2,(rand()-.5)*11);p.o.scale.setScalar(.45+rand()*2)}
+// High-altitude luminous cloud banks, built from overlapping shaded volumes.
+const cloudMats=[mat(0xeaf7f6,0,1,{transparent:true,opacity:.91,depthWrite:false}),mat(0xfff0df,0,1,{transparent:true,opacity:.87,depthWrite:false}),mat(0xc5e7eb,0,1,{transparent:true,opacity:.8,depthWrite:false})];
+const clouds=[];for(let layer=0;layer<4;layer++)for(let i=0;i<17;i++){let g=new THREE.Group(),theta=rand()*Math.PI*2,r=20+rand()*125;g.position.set(Math.sin(theta)*r,44+layer*43+rand()*25,Math.cos(theta)*r);for(let k=0;k<5;k++){let m=cloudMats[(k+layer)%3],s=ball(g,1,(k-2)*3.6+(rand()-.5)*2,(rand()-.5)*2,(rand()-.5)*6,m,10);s.scale.set(3+rand()*2.7,1.35+rand()*1.1,2.8+rand()*2.2);s.castShadow=false;s.receiveShadow=false}g.scale.setScalar(.9+rand()*.75);scene.add(g);clouds.push({g,drift:.18+rand()*.35,phase:rand()*6.28})}
+// Atmospheric sun halo uses the same procedural soft texture, no image assets.
+const sunHalo=new THREE.Sprite(new THREE.SpriteMaterial({map:puffTex,color:0xffefbc,transparent:true,opacity:.18,blending:THREE.AdditiveBlending,depthWrite:false}));sunHalo.position.set(-130,150,-240);sunHalo.scale.set(170,170,1);scene.add(sunHalo);
+const clock=new THREE.Clock();let t=0,smokeAcc=0,sparkAcc=0;let cameraY=19,cameraAim=14;const V=new THREE.Vector3();
+function animate(){requestAnimationFrame(animate);let dt=Math.min(clock.getDelta(),.04);t+=dt;
+let ignition=smooth(2.0,6.2,t),thrust=smooth(3.7,7.4,t),released=smooth(7.1,7.8,t),flight=Math.max(0,t-8.0);
+let altitude=flight>0?(.23*flight*flight+1.15*Math.pow(flight,1.45)):0;
+let vibrate=thrust*(1-released)*(.035*Math.sin(t*45)+.02*Math.sin(t*77));rocket.position.set(vibrate,altitude+.012*Math.sin(t*2.1),vibrate*.6);
+rocket.rotation.z=flight>0?.008*Math.sin(t*.65):vibrate*.014;
+for(let i=0;i<arms.length;i++){let a=arms[i];a.rotation.y=-released*(1.13+i*.08);a.rotation.z=released*(i===1?.16:-.12)}
+let power=ignition*(.48+thrust*.52),flicker=1+.04*Math.sin(t*27)+.025*Math.sin(t*53);
+flameGroup.visible=power>.002;
+let plumeLength=(2+thrust*9+smooth(8,16,t)*15+smooth(16,27,t)*10)*power;
+flames.forEach((f,i)=>{f.u.uTime.value=t+i*.8;f.u.uPower.value=power*(1-i*.11);f.mesh.scale.set(1+i*.26,plumeLength*(1+i*.075)*flicker,1+i*.26);f.mesh.visible=power>.01});
+engineLight.intensity=power*(18+7*Math.sin(t*35)*.15);engineLight.distance=25+power*35;groundLight.intensity=power*clamp(1-altitude/22,0,1)*28;
+// Heat haze: semi-transparent luminous eddies and asymmetric flicker at the nozzle.
+smokeAcc+=dt*(t<2?1.3:t<8?9+thrust*34:clamp(43-altitude*.14,5,43));
+while(smokeAcc>=1){smokeAcc--;let a=rand()*6.283,r=rand()*1.8;if(t<2){emitSmoke(-8.6+(rand()-.5),4+rand()*8,(rand()-.5)*2,.18)}else if(altitude<25){let d=3+rand()*4;emitSmoke(Math.cos(a)*d,2.3+rand()*2,Math.sin(a)*d,.4+thrust*2,rand()<.27?2:0)}else{emitSmoke((rand()-.5)*2,altitude+2.9-(rand()*plumeLength*.75),(rand()-.5)*2,.35,1)}}
+if(t>3&&altitude<36){sparkAcc+=dt*(6+thrust*62);while(sparkAcc>1){sparkAcc--;let a=rand()*6.28,r=rand()*3;emitSpark(Math.cos(a)*r,3+altitude,Math.sin(a)*r)}}
+for(let p of smoke){if(p.life>=p.max)continue;p.life+=dt;let age=p.life/p.max;if(age>=1){p.s.material.opacity=0;continue}let rise=p.type===2?.55:.36;p.velocity.x+=Math.sin(t*1.1+p.spin*9)*dt*.22;p.velocity.z+=Math.cos(t*.9+p.spin*9)*dt*.22;p.s.position.addScaledVector(p.velocity,dt);p.s.position.y+=dt*rise;p.s.scale.setScalar(p.base*(1+age*2.4));p.s.material.opacity=(p.type===2?.46:.38)*smooth(0,.12,age)*(1-smooth(.55,1,age));p.s.material.rotation+=p.spin*dt*.2}
+for(let p of sparks){if(p.life>=p.max)continue;p.life+=dt;p.o.position.addScaledVector(p.v,dt);p.v.y-=dt*10;let s=Math.max(0,1-p.life/p.max);p.o.scale.setScalar(s*1.5);if(p.life>=p.max)p.o.position.y=-100}
+for(let i=0;i<blades.length;i++){let p=blades[i],r=Math.hypot(p.x,p.z);dummy.position.set(p.x,1.35+p.scale*.42,p.z);dummy.scale.set(p.scale,p.scale,p.scale);dummy.rotation.set(0,0,Math.sin(t*2.8+p.phase)*(.05+thrust*.11*Math.max(0,1-r/50)));dummy.updateMatrix();grassInst.setMatrixAt(i,dummy.matrix)}grassInst.instanceMatrix.needsUpdate=true;
+for(let i=0;i<clouds.length;i++){let p=clouds[i];p.g.position.x+=p.drift*dt;p.g.position.y+=Math.sin(t*.2+p.phase)*dt*.025}
+// Follow from a three-quarter angle, easing the horizon downward as the vehicle climbs.
+let follow=smooth(8,12,t),desiredY=19+altitude*follow*.89;cameraY+=(desiredY-cameraY)*Math.min(1,dt*1.35);
+cameraAim+=(14+altitude*follow*.98-cameraAim)*Math.min(1,dt*1.8);
+let shake=thrust*(1-smooth(10,13,t))*(.055+.095*smooth(7.6,8.4,t));
+let framing=smooth(10,24,t);let distance=1+framing*.17;
+camera.position.set((31+3*Math.sin(t*.065))*distance+Math.sin(t*46)*shake,cameraY+Math.sin(t*51)*shake*.46,(48+2*Math.cos(t*.07))*distance+Math.cos(t*39)*shake);
+camera.lookAt(.5,cameraAim,0);
+// Keep the directional shadow centered on the relevant geometry while it remains nearby.
+if(altitude<90){sun.target.position.set(0,altitude*.5,0);sun.target.updateMatrixWorld()}
+renderer.render(scene,camera)}
+window.addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.8))});
+camera.position.set(31,19,48);camera.lookAt(0,14,0);animate();
+})();
+</script>
+</body>
+</html>
