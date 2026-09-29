@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Rocket Launch</title>
+<style>html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#60c9ff}canvas{display:block;width:100%;height:100%;}</style>
+</head>
+<body>
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+<script>
+(()=>{
+'use strict';
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x56c9ff);
+scene.fog=new THREE.FogExp2(0x9edcff,0.00225);
+const camera=new THREE.PerspectiveCamera(43,innerWidth/innerHeight,.1,1500);
+camera.position.set(66,34,92);
+const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
+renderer.setSize(innerWidth,innerHeight); renderer.setPixelRatio(Math.min(devicePixelRatio,1.6));
+renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.outputColorSpace=THREE.SRGBColorSpace; renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.18;
+document.body.appendChild(renderer.domElement);
+const hemi=new THREE.HemisphereLight(0xcaf2ff,0x6b8141,2.15);scene.add(hemi);
+const sun=new THREE.DirectionalLight(0xfff2c4,4.5);sun.position.set(-65,110,45);sun.castShadow=true;
+sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=-110;sun.shadow.camera.right=110;sun.shadow.camera.top=120;sun.shadow.camera.bottom=-80;sun.shadow.camera.far=300;sun.shadow.bias=-.0003;scene.add(sun);
+const fill=new THREE.DirectionalLight(0x71bfff,1.2);fill.position.set(75,35,60);scene.add(fill);
+const mats={
+ white:new THREE.MeshStandardMaterial({color:0xf3f6f2,roughness:.36,metalness:.35}),
+ dark:new THREE.MeshStandardMaterial({color:0x172b3c,roughness:.3,metalness:.72}),
+ black:new THREE.MeshStandardMaterial({color:0x101721,roughness:.42,metalness:.65}),
+ red:new THREE.MeshStandardMaterial({color:0xf04444,roughness:.4,metalness:.28}),
+ orange:new THREE.MeshStandardMaterial({color:0xff8a2b,roughness:.5,metalness:.15}),
+ steel:new THREE.MeshStandardMaterial({color:0x6d8394,roughness:.32,metalness:.82}),
+ yellow:new THREE.MeshStandardMaterial({color:0xffcf36,roughness:.44,metalness:.22}),
+ concrete:new THREE.MeshStandardMaterial({color:0x72828b,roughness:.86,metalness:.03}),
+ grass:new THREE.MeshStandardMaterial({color:0x3c9c57,roughness:1}),
+ grass2:new THREE.MeshStandardMaterial({color:0x79c94c,roughness:1}),
+ cyan:new THREE.MeshStandardMaterial({color:0x25bde2,roughness:.42,metalness:.32}),
+};
+function mesh(g,m,x=0,y=0,z=0,shadow=true){const o=new THREE.Mesh(g,m);o.position.set(x,y,z);o.castShadow=shadow;o.receiveShadow=shadow;scene.add(o);return o}
+function box(w,h,d,m,x,y,z){return mesh(new THREE.BoxGeometry(w,h,d),m,x,y,z)}
+function cyl(rt,rb,h,seg,m,x,y,z){return mesh(new THREE.CylinderGeometry(rt,rb,h,seg),m,x,y,z)}
+// terrain
+const ground=mesh(new THREE.CylinderGeometry(180,190,5,96),new THREE.MeshStandardMaterial({color:0x55ad55,roughness:.95}),0,-4,0);ground.receiveShadow=true;
+// layered rolling hills
+for(let i=0;i<28;i++){const a=i/28*Math.PI*2,r=115+Math.sin(i*2.1)*22;const hill=mesh(new THREE.SphereGeometry(20+Math.random()*15,20,10),i%3?mats.grass2:mats.grass,r*Math.cos(a),-2+(Math.random()*6),r*Math.sin(a));hill.scale.set(1.8,.55,1.1);}
+// roads and pad
+cyl(42,42,1.7,72,new THREE.MeshStandardMaterial({color:0x59676d,roughness:.8}),0,-.4,0);
+cyl(30,30,1.1,64,new THREE.MeshStandardMaterial({color:0x8f9ba0,roughness:.83}),0,.75,0);
+for(let i=0;i<24;i++){const a=i/24*Math.PI*2;const b=box(1.5,1.1,5,mats.yellow,36*Math.cos(a),.6,36*Math.sin(a));b.rotation.y=-a;}
+// flame trench
+box(13,2.2,35,mats.dark,0,1,-4); box(8,1.2,38,new THREE.MeshStandardMaterial({color:0x202b31,roughness:.9}),0,2,-4);
+// radial service roads
+for(const a of [-1.3,.25,2.1]){const road=box(12,.3,100,new THREE.MeshStandardMaterial({color:0x657278,roughness:.95}),Math.sin(a)*54,-.6,Math.cos(a)*54);road.rotation.y=a;}
+// pipes
+function pipePath(points,color=0x43b9d1,r=.62){const curve=new THREE.CatmullRomCurve3(points.map(p=>new THREE.Vector3(...p)));const t=mesh(new THREE.TubeGeometry(curve,48,r,10,false),new THREE.MeshStandardMaterial({color,metalness:.62,roughness:.32}));return t}
+pipePath([[-28,2,18],[-22,2,18],[-18,4,12],[-15,4,3]],0x2cc3dd,.75);
+pipePath([[23,2,21],[18,2,21],[15,5,14],[13,5,3]],0xffc529,.58);
+// tanks
+for(const [x,z,c] of [[-31,23,0xe9edf0],[-38,18,0x4cc2de],[31,25,0xe9edf0]]){cyl(5.2,5.2,11,28,new THREE.MeshStandardMaterial({color:c,metalness:.55,roughness:.3}),x,6,z);const dome=mesh(new THREE.SphereGeometry(5.2,24,12,0,Math.PI*2,0,Math.PI/2),mats.white,x,11.5,z);for(let k=0;k<4;k++){const leg=box(.5,5,.5,mats.steel,x+(k<2?-3:3),1.6,z+(k%2?-3:3));}}
+// tower lattice
+const tower=new THREE.Group();tower.position.set(-15,1,0);scene.add(tower);
+function addTower(o){o.castShadow=o.receiveShadow=true;tower.add(o);return o}
+for(const x of [-3.8,3.8])for(const z of [-3.8,3.8]){const p=new THREE.Mesh(new THREE.BoxGeometry(.75,59,.75),mats.steel);p.position.set(x,29.5,z);addTower(p)}
+for(let y=3;y<59;y+=5){for(const z of [-3.8,3.8]){const h=new THREE.Mesh(new THREE.BoxGeometry(8.2,.45,.45),mats.steel);h.position.set(0,y,z);addTower(h);for(const rot of [1,-1]){const d=new THREE.Mesh(new THREE.BoxGeometry(9.2,.24,.34),mats.steel);d.position.set(0,y-2.5,z);d.rotation.z=rot*.55;addTower(d)}}for(const x of [-3.8,3.8]){const h=new THREE.Mesh(new THREE.BoxGeometry(.45,.45,8.2),mats.steel);h.position.set(x,y,0);addTower(h)}}
+for(const y of [10,22,34,46,58]){const deck=new THREE.Mesh(new THREE.BoxGeometry(11,.7,10),mats.dark);deck.position.set(0,y,0);addTower(deck);for(let x=-4;x<=4;x+=2){const rail=new THREE.Mesh(new THREE.BoxGeometry(.12,1.2,.12),mats.yellow);rail.position.set(x,y+1,-4.5);addTower(rail)}}
+// elevator block
+const elev=new THREE.Mesh(new THREE.BoxGeometry(3.2,56,3.2),new THREE.MeshStandardMaterial({color:0x334958,metalness:.65,roughness:.35}));elev.position.set(-5.7,29,0);addTower(elev);
+// rocket
+const rocket=new THREE.Group();rocket.position.y=3;scene.add(rocket);
+function rmesh(g,m,y){const o=new THREE.Mesh(g,m);o.position.y=y;o.castShadow=o.receiveShadow=true;rocket.add(o);return o}
+const body=rmesh(new THREE.CylinderGeometry(4.35,4.35,35,48),mats.white,24);
+// panel rings
+for(const y of [7,14,22,31,39]){const ring=rmesh(new THREE.CylinderGeometry(4.48,4.48,.42,48),y===14?mats.red:mats.dark,y);}
+rmesh(new THREE.CylinderGeometry(3.2,4.35,6.5,48),mats.white,44.75);
+rmesh(new THREE.ConeGeometry(3.2,10,48),mats.red,53);
+// windows / markings
+for(const a of [0,Math.PI]){const w=new THREE.Mesh(new THREE.CircleGeometry(.8,24),new THREE.MeshStandardMaterial({color:0x162d4d,metalness:.8,roughness:.15}));w.position.set(Math.sin(a)*4.36,37,Math.cos(a)*4.36);w.rotation.y=a;rocket.add(w)}
+for(let i=0;i<4;i++){const a=i*Math.PI/2;const fin=new THREE.Mesh(new THREE.BoxGeometry(.55,8,5.8),mats.red);fin.position.set(Math.sin(a)*5.2,8,Math.cos(a)*5.2);fin.rotation.y=a;fin.rotation.z=(i%2?.10:-.10);rocket.add(fin)}
+// engines
+for(let i=0;i<5;i++){const a=i?((i-1)/4*Math.PI*2):0,r=i?2.3:0;const e=new THREE.Mesh(new THREE.CylinderGeometry(1.05,1.5,2.8,24),mats.black);e.position.set(Math.cos(a)*r,4.9,Math.sin(a)*r);rocket.add(e)}
+// panel lines and rivets
+for(let y=11;y<40;y+=4){for(let i=0;i<12;i++){const a=i/12*Math.PI*2;const riv=new THREE.Mesh(new THREE.SphereGeometry(.075,6,4),mats.dark);riv.position.set(Math.sin(a)*4.38,y,Math.cos(a)*4.38);rocket.add(riv)}}
+// clamps
+const clamps=[];
+for(const [y,z] of [[12,0],[28,0],[40,0]]){const pivot=new THREE.Group();pivot.position.set(-10.5,y, z);scene.add(pivot);const arm=box(10,.75,1.25,mats.orange,-5.5,y,z);scene.remove(arm);arm.position.set(5,0,0);pivot.add(arm);const jaw=new THREE.Mesh(new THREE.BoxGeometry(1.2,2.4,3),mats.steel);jaw.position.set(10,0,0);pivot.add(jaw);clamps.push(pivot)}
+// nearby structures
+for(let i=0;i<10;i++){const a=i/10*Math.PI*2+.3,r=49+Math.random()*12;const x=Math.cos(a)*r,z=Math.sin(a)*r;const b=box(5+Math.random()*7,3+Math.random()*4,5+Math.random()*7,i%3===0?mats.cyan:mats.concrete,x,2,z);if(i%2){const ac=box(2,.8,2,mats.steel,x,5.5,z)}}
+// floodlights & beacons
+const beacons=[];
+for(let i=0;i<10;i++){const a=i/10*Math.PI*2,r=32;const pole=cyl(.15,.2,7,8,mats.dark,Math.cos(a)*r,4,Math.sin(a)*r);const bulb=mesh(new THREE.SphereGeometry(.38,10,6),new THREE.MeshBasicMaterial({color:i%2?0xff3b30:0xffdf52}),Math.cos(a)*r,7.7,Math.sin(a)*r,false);beacons.push(bulb)}
+// vegetation reacting
+const blades=[]; const bladeGeo=new THREE.ConeGeometry(.12,2.2,5);for(let i=0;i<240;i++){const a=Math.random()*Math.PI*2,r=45+Math.random()*70;const b=mesh(bladeGeo,i%2?mats.grass:mats.grass2,Math.cos(a)*r,0,Math.sin(a)*r,false);b.rotation.z=(Math.random()-.5)*.2;b.userData={a,phase:Math.random()*6};blades.push(b)}
+// clouds
+const cloudMat=new THREE.MeshStandardMaterial({color:0xffffff,roughness:1,transparent:true,opacity:.88,depthWrite:false});const clouds=[];
+for(let c=0;c<18;c++){const g=new THREE.Group();const layer=c<10?75:125;for(let j=0;j<7;j++){const puff=new THREE.Mesh(new THREE.SphereGeometry(6+Math.random()*7,16,10),cloudMat);puff.position.set((j-3)*7+(Math.random()-.5)*5,Math.random()*5,(Math.random()-.5)*9);puff.scale.y=.55;g.add(puff)}g.position.set((Math.random()-.5)*230,layer+Math.random()*18,(Math.random()-.5)*200);scene.add(g);clouds.push(g)}
+// particle systems
+const smokeGeo=new THREE.IcosahedronGeometry(1,1);const smokeMats=[0xeaf2f2,0xcdd9d8,0xb6c3c1,0x9da9a4].map(c=>new THREE.MeshStandardMaterial({color:c,roughness:1,transparent:true,opacity:.65,depthWrite:false}));
+const smoke=[];function spawnSmoke(x,y,z,scale=1,hot=false){if(smoke.length>320){const s=smoke.shift();scene.remove(s.m)}const m=new THREE.Mesh(smokeGeo,smokeMats[Math.floor(Math.random()*smokeMats.length)]);m.position.set(x,y,z);m.scale.setScalar(scale*(.8+Math.random()));scene.add(m);smoke.push({m,v:new THREE.Vector3((Math.random()-.5)*.16,.025+Math.random()*.06,(Math.random()-.5)*.16),life:0,max:4+Math.random()*4,spin:(Math.random()-.5)*.03})}
+const sparkGeo=new THREE.BufferGeometry();const N=650;const pos=new Float32Array(N*3),vel=new Float32Array(N*3),life=new Float32Array(N);for(let i=0;i<N;i++)life[i]=-1;sparkGeo.setAttribute('position',new THREE.BufferAttribute(pos,3));const sparkMat=new THREE.PointsMaterial({color:0xffc342,size:.3,transparent:true,opacity:.95,blending:THREE.AdditiveBlending,depthWrite:false});const sparks=new THREE.Points(sparkGeo,sparkMat);scene.add(sparks);let sparkCursor=0;
+function emitSpark(power){for(let k=0;k<Math.floor(power*9);k++){const i=sparkCursor++%N,a=Math.random()*Math.PI*2,r=Math.random()*4;pos[i*3]=rocket.position.x+Math.cos(a)*r;pos[i*3+1]=rocket.position.y+3;pos[i*3+2]=Math.sin(a)*r;vel[i*3]=Math.cos(a)*(2+Math.random()*8)*power;vel[i*3+1]=-3+Math.random()*6;vel[i*3+2]=Math.sin(a)*(2+Math.random()*8)*power;life[i]=.4+Math.random()*1.3}}
+// flames: layered translucent cones + point lights
+const flameGroup=new THREE.Group();scene.add(flameGroup);const flameLayers=[];
+function flame(color,rad,len,op){const mat=new THREE.MeshBasicMaterial({color,transparent:true,opacity:op,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide});const m=new THREE.Mesh(new THREE.ConeGeometry(rad,len,24,1,true),mat);m.rotation.z=Math.PI;m.position.y=-len/2;flameGroup.add(m);flameLayers.push(m);return m}
+flame(0xffffff,1.45,7,.96);flame(0x7de8ff,2.15,12,.7);flame(0xffdc44,3.05,18,.63);flame(0xff6a14,4.35,25,.42);
+const engineLight=new THREE.PointLight(0xff8b2c,0,75,1.5);scene.add(engineLight);
+// heat shimmer discs
+const shimmer=[];for(let i=0;i<8;i++){const d=mesh(new THREE.RingGeometry(1.2,3.8,32),new THREE.MeshBasicMaterial({color:0xffc06b,transparent:true,opacity:0,side:THREE.DoubleSide,depthWrite:false,blending:THREE.AdditiveBlending}),0,0,0,false);d.rotation.x=Math.PI/2;shimmer.push(d)}
+// animation
+const clock=new THREE.Clock();let total=0,smokeTick=0;
+function smooth(a,b,x){x=Math.max(0,Math.min(1,(x-a)/(b-a)));return x*x*(3-2*x)}
+function animate(){requestAnimationFrame(animate);const dt=Math.min(clock.getDelta(),.033);total+=dt;const t=total%23;
+ const ignite=smooth(2.4,6.2,t), release=smooth(7.0,7.8,t), lift=smooth(7.7,15.5,t);
+ let alt=0;if(t>7.7){const q=t-7.7;alt=1.15*q*q+1.1*q;}
+ rocket.position.y=3+alt;
+ const vib=ignite*(1-release)*(.055+.09*ignite);rocket.position.x=Math.sin(total*45)*vib;rocket.position.z=Math.cos(total*39)*vib;
+ // arms swing away
+ clamps.forEach((p,i)=>{p.rotation.y=release*(i%2?.82:-.82);p.position.y=(i===0?0:0)});
+ // flames follow and lengthen
+ const thrust=Math.max(0,ignite);flameGroup.visible=thrust>.01;flameGroup.position.set(rocket.position.x,rocket.position.y+4.0,rocket.position.z);
+ const plume=thrust*(1+lift*1.25);flameLayers.forEach((f,i)=>{f.scale.set(.7+thrust*.3,Math.max(.03,plume*(.72+Math.sin(total*(18+i*4)+i)*.07)),.7+thrust*.3);f.rotation.y=total*(i%2?.6:-.45)});
+ engineLight.position.set(rocket.position.x,rocket.position.y+1,rocket.position.z);engineLight.intensity=thrust*(220+lift*110);engineLight.distance=55+lift*30;
+ // smoke emission
+ smokeTick+=dt;const rate=ignite>.05?(.045/(.25+ignite)): .34;if(smokeTick>rate){smokeTick=0;if(ignite>.05){for(let k=0;k<2+Math.floor(ignite*5);k++){const a=Math.random()*Math.PI*2,r=Math.random()*4;spawnSmoke(rocket.position.x+Math.cos(a)*r,Math.max(1.5,rocket.position.y+1-Math.random()*7),Math.sin(a)*r,1.1+ignite*1.3)}}else spawnSmoke(-2+Math.random()*4,3,-1+Math.random()*2,.5)}
+ smoke.forEach((s,idx)=>{s.life+=dt;const groundPush=ignite*(1-Math.min(1,alt/25));const radial=new THREE.Vector3(s.m.position.x,0,s.m.position.z).normalize();s.v.addScaledVector(radial,groundPush*dt*4.2);s.v.y+=dt*(.08+lift*.05);s.m.position.addScaledVector(s.v,dt*9);s.m.rotation.y+=s.spin;s.m.rotation.x+=s.spin*.6;const grow=1+dt*(.12+ignite*.14);s.m.scale.multiplyScalar(grow);s.m.material.opacity=Math.max(0,.68*(1-s.life/s.max));if(s.life>s.max){scene.remove(s.m);smoke.splice(idx,1)}});
+ // sparks
+ if(ignite>.2)emitSpark(ignite);for(let i=0;i<N;i++){if(life[i]>0){life[i]-=dt;vel[i*3+1]-=9*dt;pos[i*3]+=vel[i*3]*dt;pos[i*3+1]+=vel[i*3+1]*dt;pos[i*3+2]+=vel[i*3+2]*dt;if(pos[i*3+1]<.5)vel[i*3+1]*=-.28}else pos[i*3+1]=-999}sparkGeo.attributes.position.needsUpdate=true;
+ // shimmer
+ shimmer.forEach((d,i)=>{d.position.set(rocket.position.x,rocket.position.y-1-i*2.8,rocket.position.z);const pulse=.8+Math.sin(total*17+i)*.2;d.scale.setScalar(pulse+lift*.3);d.material.opacity=thrust*.045*(1-i/10);d.rotation.z=total*(i%2?1:-1)});
+ // vegetation blast
+ blades.forEach(b=>{const gust=ignite*(1-Math.min(1,alt/32))*Math.max(0,1-(Math.hypot(b.position.x,b.position.z)-40)/80);b.rotation.z=Math.sin(b.userData.a)*gust*.78+Math.sin(total*6+b.userData.phase)*.08});
+ beacons.forEach((b,i)=>b.visible=Math.sin(total*5+i)>.05);clouds.forEach((c,i)=>c.position.x+=dt*(i<10?.4:.85));
+ // cinematic follow, reset cycle smoothly at t wrap
+ const targetY=24+alt*.82;const desired=new THREE.Vector3(66-alt*.15,35+alt*.74,92-alt*.12);camera.position.lerp(desired,1-Math.pow(.002,dt));
+ const shake=ignite*(.03+.12*smooth(6.4,8.8,t))*(1-smooth(10,14,t));camera.position.x+=Math.sin(total*42)*shake;camera.position.y+=Math.sin(total*47)*shake*.55;
+ camera.lookAt(0,targetY,0);
+ renderer.render(scene,camera)
+}
+animate();
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+})();
+</script>
+</body></html>
+​
