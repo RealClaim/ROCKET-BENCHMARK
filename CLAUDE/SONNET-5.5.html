@@ -1,0 +1,186 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Rocket Launch</title>
+<style>html,body{margin:0;height:100%;overflow:hidden;background:#9fd0ff}canvas{display:block;width:100%;height:100%}</style></head><body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const rnd=(a,b)=>a+Math.random()*(b-a),cl=(x,a=0,b=1)=>Math.min(b,Math.max(a,x));
+const sm=(a,b,x)=>{x=cl((x-a)/(b-a));return x*x*(3-2*x)};
+const n2=(x,z)=>Math.sin(x*.011)*Math.cos(z*.013)+.5*Math.sin(x*.027+z*.019)+.25*Math.sin(x*.06-z*.05);
+const th=(x,z)=>{const r=Math.hypot(x,z);return sm(75,240,r)*Math.max(0,18+24*n2(x,z))+sm(420,760,r)*110*(.6+.4*n2(z,x))};
+const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight);
+renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.15;
+document.body.appendChild(renderer.domElement);
+const scene=new THREE.Scene();scene.fog=new THREE.Fog(0xcfe8ff,300,2200);
+const camera=new THREE.PerspectiveCamera(50,innerWidth/innerHeight,.5,6000);
+const SC={value:1};
+function resize(){renderer.setSize(innerWidth,innerHeight);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();}
+addEventListener('resize',resize);
+// sky
+const sky=new THREE.Mesh(new THREE.SphereGeometry(4000,32,16),new THREE.ShaderMaterial({side:THREE.BackSide,depthWrite:false,fog:false,
+vertexShader:'varying vec3 p;void main(){p=normalize(position);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
+fragmentShader:'varying vec3 p;void main(){float h=max(p.y,0.);vec3 c=mix(vec3(.86,.94,1.),vec3(.08,.42,.95),pow(h,.55));vec3 s=normalize(vec3(.5,.55,.35));float d=max(dot(p,s),0.);c+=vec3(1.,.9,.6)*(pow(d,600.)*2.+pow(d,12.)*.25);gl_FragColor=vec4(c,1.);}'}));
+scene.add(sky);
+// lights
+scene.add(new THREE.HemisphereLight(0xcfe8ff,0x6a9a40,.85));
+const sun=new THREE.DirectionalLight(0xfff0d0,1.7);sun.position.set(80,110,55);sun.castShadow=true;
+sun.shadow.mapSize.set(2048,2048);Object.assign(sun.shadow.camera,{left:-100,right:100,top:100,bottom:-100,near:10,far:300});sun.shadow.bias=-.0006;scene.add(sun);
+const fireLight=new THREE.PointLight(0xff9a40,0,150,1.2);scene.add(fireLight);
+// textures
+function tex(fn,s=128){const c=document.createElement('canvas');c.width=c.height=s;fn(c.getContext('2d'),s);return new THREE.CanvasTexture(c)}
+const glowT=tex((g,s)=>{const r=g.createRadialGradient(s/2,s/2,0,s/2,s/2,s/2);r.addColorStop(0,'rgba(255,255,255,1)');r.addColorStop(.4,'rgba(255,255,255,.5)');r.addColorStop(1,'rgba(255,255,255,0)');g.fillStyle=r;g.fillRect(0,0,s,s)});
+function blob(g,s,n){for(let i=0;i<n;i++){const x=s/2+(Math.random()-.5)*s*.45,y=s/2+(Math.random()-.5)*s*.35,rad=s*rnd(.14,.27),r=g.createRadialGradient(x,y,0,x,y,rad);r.addColorStop(0,`rgba(255,255,255,${rnd(.25,.5)})`);r.addColorStop(1,'rgba(255,255,255,0)');g.fillStyle=r;g.fillRect(0,0,s,s)}}
+const puffT=tex((g,s)=>blob(g,s,28),256);
+const cloudT=tex((g,s)=>{blob(g,s,34);g.globalCompositeOperation='source-atop';const l=g.createLinearGradient(0,s*.25,0,s*.75);l.addColorStop(0,'#ffffff');l.addColorStop(1,'#a9bfe0');g.fillStyle=l;g.fillRect(0,0,s,s)},256);
+// terrain
+const tg=new THREE.PlaneGeometry(2000,2000,150,150);tg.rotateX(-Math.PI/2);
+{const p=tg.attributes.position,cols=[],c=new THREE.Color(),cy=new THREE.Color(.9,.82,.22),co=new THREE.Color(.95,.5,.2),cr=new THREE.Color(.66,.58,.62),cw=new THREE.Color(1,1,1);
+for(let i=0;i<p.count;i++){const x=p.getX(i),z=p.getZ(i),h=th(x,z),r=Math.hypot(x,z);p.setY(i,h);
+c.setRGB(.28,.72,.18).lerp(cy,sm(.35,.75,n2(x*1.7,z*1.7)*.5+.5)).lerp(co,sm(.6,.9,n2(z*2.3,x*2.1)*.5+.5)*sm(60,150,r)).lerp(cr,sm(30,90,h)).lerp(cw,sm(95,130,h));cols.push(c.r,c.g,c.b)}
+tg.setAttribute('color',new THREE.Float32BufferAttribute(cols,3));tg.computeVertexNormals()}
+const ter=new THREE.Mesh(tg,new THREE.MeshLambertMaterial({vertexColors:true}));ter.receiveShadow=true;scene.add(ter);
+// helpers
+const M=(c,r=.55,m=.2)=>new THREE.MeshStandardMaterial({color:c,roughness:r,metalness:m});
+const mRed=M(0xe8452c,.5,.3),mGray=M(0xb8bcc4,.8,.1),mWhite=M(0xf6f8ff,.3,.35),mDark=M(0x333844,.5,.6),mYel=M(0xffc21a,.5,.2);
+function box(w,h,d,m,x,y,z,p=scene){const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);o.position.set(x,y,z);o.castShadow=o.receiveShadow=true;p.add(o);return o}
+function cyl(a,b,h,m,x,y,z,p=scene,seg=24){const o=new THREE.Mesh(new THREE.CylinderGeometry(a,b,h,seg),m);o.position.set(x,y,z);o.castShadow=o.receiveShadow=true;p.add(o);return o}
+const blinkers=[];function blinker(x,y,z){const o=new THREE.Mesh(new THREE.SphereGeometry(.45,8,8),new THREE.MeshBasicMaterial({color:0xff2020}));o.position.set(x,y,z);scene.add(o);blinkers.push(o)}
+// pad
+const PT=3,HH=5.2;
+box(26,PT,13-HH,mGray,0,PT/2,(13+HH)/2);box(26,PT,13-HH,mGray,0,PT/2,-(13+HH)/2);
+box(13-HH,PT,2*HH,mGray,(13+HH)/2,PT/2,0);box(13-HH,PT,2*HH,mGray,-(13+HH)/2,PT/2,0);
+const tr=new THREE.Mesh(new THREE.PlaneGeometry(2*HH,2*HH),new THREE.MeshBasicMaterial({color:0x14151a}));tr.rotation.x=-Math.PI/2;tr.position.y=.06;scene.add(tr);
+for(const s of[-1,1]){box(26.2,.15,.8,mYel,0,PT+.05,s*12.6);box(.8,.15,26.2,mYel,s*12.6,PT+.05,0)}
+[[-12,-12],[12,-12],[12,12],[-12,12]].forEach(p=>blinker(p[0],PT+1,p[1]));
+// mount beams
+for(const s of[-1,1]){box(3.6,.8,.9,mDark,s*4.2,5.1,0);box(.9,.8,3.6,mDark,0,5.1,s*4.2);box(.8,2.2,.8,mDark,s*5.6,4.1,0);box(.8,2.2,.8,mDark,0,4.1,s*5.6)}
+// tower
+const TX=-15;
+for(const a of[-2,2])for(const b of[-2,2])box(.6,56,.6,mRed,TX+a,28,b);
+for(let k=0;k<14;k++){const y=4*k+1,sg=k%2?1:-1;
+box(4.6,.3,.3,mRed,TX,y,2);box(4.6,.3,.3,mRed,TX,y,-2);box(.3,.3,4.6,mRed,TX+2,y,0);box(.3,.3,4.6,mRed,TX-2,y,0);
+for(const z of[-2,2]){const d=box(.22,5.66,.22,mRed,TX,y+2,z);d.rotation.z=sg*Math.PI/4}
+for(const x of[-2,2]){const d=box(.22,5.66,.22,mRed,TX+x,y+2,0);d.rotation.x=sg*Math.PI/4}}
+[12,24,36,48].forEach(y=>box(7,.3,7,mGray,TX,y,0));
+cyl(.15,.15,10,mGray,TX,60,0);blinker(TX,65.5,0);blinker(TX+2,56.5,2);
+const arms=[15,27,39].map(y=>{const g=new THREE.Group();g.position.set(TX+2.2,y,0);scene.add(g);box(10.6,.8,.8,mYel,5.3,0,0,g);box(1.2,1.8,2,mDark,10.4,0,0,g);box(7,.4,.4,mRed,4,-1,0,g).rotation.z=.25;return g});
+// service structures
+for(let i=0;i<3;i++){const x=24+i*9;const s=new THREE.Mesh(new THREE.SphereGeometry(4,24,16),M(0xf4f6fa,.3,.4));s.position.set(x,7,-18);s.castShadow=true;scene.add(s);
+for(const a of[-2,2])for(const b of[-2,2])cyl(.3,.3,4,mDark,x+a,2,-18+b,scene,8);
+cyl(.5,.5,x-8,mYel,(x+8)/2,1.6,-18,scene,8).rotation.z=Math.PI/2}
+box(20,8,12,M(0xf0f0f5),-40,4,-40);box(18,.6,14,mRed,-40,8.2,-40);box(14,6,10,M(0x5aa9e6),20,3,-50);box(16,.6,12,mRed,20,6.2,-50);
+const bm=[M(0xf2f2f2,.9,0),M(0xe03c31,.9,0)];
+for(let i=0;i<44;i++){const a=i/44*6.283+.07;if(Math.abs(Math.sin(a))<.12&&Math.cos(a)>0)continue;const b=box(5,1.7,1.4,bm[i%2],Math.cos(a)*48,.85,Math.sin(a)*48);b.rotation.y=-a+Math.PI/2}
+// rocket
+const R=new THREE.Group();R.position.y=PT+2.6;scene.add(R);
+cyl(2.4,2.4,26,mWhite,0,13,0,R,40);
+[[8,1.4,0xe8452c],[16.5,.9,0x2b3a55],[23,1.6,0xe8452c],[25.3,1.5,0x333844]].forEach(b=>cyl(2.44,2.44,b[1],M(b[2],.5,.3),0,b[0],0,R,40));
+const ogv=[];for(let i=0;i<=24;i++){const t=i/24;ogv.push(new THREE.Vector2(2.4*Math.pow(1-t*t,.6),26+14*t))}
+const nose=new THREE.Mesh(new THREE.LatheGeometry(ogv,40),M(0xff5a2a,.3,.4));nose.castShadow=true;R.add(nose);
+const pm=M(0xdfe6f2,.4,.4);
+[6,13,20].forEach((y,j)=>{for(let i=0;i<14;i++){const a=(i+j*.5)/14*6.283;const p=box(1.5,3,.14,pm,Math.sin(a)*2.44,y,Math.cos(a)*2.44,R);p.rotation.y=a}});
+for(const s of[-1,1]){cyl(1.15,1.15,18,mWhite,s*3.65,9,0,R,32);const c=new THREE.Mesh(new THREE.ConeGeometry(1.15,4,32),M(0xe8452c,.4,.3));c.position.set(s*3.65,20,0);c.castShadow=true;R.add(c);cyl(1.2,1.2,1,mDark,s*3.65,.5,0,R,24);cyl(.4,.7,1.4,mDark,s*3.65,-.7,0,R,16);box(1.3,.5,.5,mDark,s*3,15,0,R);box(1.3,.5,.5,mDark,s*3,4,0,R)}
+{const sh=new THREE.Shape();sh.moveTo(2.3,0);sh.lineTo(6,-1.2);sh.lineTo(6,2);sh.lineTo(2.3,10);sh.closePath();const fg=new THREE.ExtrudeGeometry(sh,{depth:.35,bevelEnabled:false});fg.translate(0,0,-.175);
+for(let k=0;k<4;k++){const f=new THREE.Mesh(fg,mRed);f.rotation.y=Math.PI/4+k*Math.PI/2;f.castShadow=true;R.add(f)}}
+cyl(2.3,2.5,1,mDark,0,-.5,0,R,32);
+const bells=[];
+const eng=[[0,0,-2.2,.75,4.6],[1.5,0,-2.2,.7,5.3],[-1.5,0,-2.2,.7,5.5],[0,1.5,-2.2,.7,5.7],[0,-1.5,-2.2,.7,5.9],[3.65,0,-1.5,.6,6.6],[-3.65,0,-1.5,.6,6.8]];
+const flames=eng.map((e,i)=>{if(i<5){const b=cyl(.55,.7,2,new THREE.MeshStandardMaterial({color:0x2b2f3a,metalness:.7,roughness:.4,emissive:0xff5010,emissiveIntensity:0}),e[0],-1.2,e[1],R,16);bells.push(b)}
+const g=new THREE.Group();g.position.set(e[0],e[2],e[1]);R.add(g);
+const mk=(c1,c2)=>new THREE.ShaderMaterial({transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,side:THREE.DoubleSide,fog:false,uniforms:{t:{value:0},k:{value:1},c1:{value:new THREE.Color(c1)},c2:{value:new THREE.Color(c2)}},
+vertexShader:'varying vec2 u;void main(){u=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
+fragmentShader:'uniform float t,k;uniform vec3 c1,c2;varying vec2 u;void main(){float v=u.y;float n=.75+.25*sin(u.x*37.699+t*30.-v*25.)*sin(u.x*18.85-t*23.+v*12.);float a=pow(1.-v,1.3)*n*k;gl_FragColor=vec4(mix(c1,c2,v)*1.4,a);}'});
+const cg=new THREE.ConeGeometry(1,1,20,1,true);cg.rotateX(Math.PI);cg.translate(0,-.5,0);
+const ls=[[1,1,0xffb020,0xff2a00],[.66,.75,0xffe070,0xff7a10],[.35,.5,0xffffff,0xffd060]].map(l=>{const m=new THREE.Mesh(cg,mk(l[2],l[3]));g.add(m);return{m,rs:l[0],ls:l[1]}});
+return{g,ls,e}});
+const glowM=c=>new THREE.SpriteMaterial({map:glowT,color:c,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true,fog:false});
+const eGlow=new THREE.Sprite(glowM(0xff8a20));scene.add(eGlow);const gGlow=new THREE.Sprite(glowM(0xffa030));gGlow.position.set(0,1.5,0);scene.add(gGlow);
+const rings=[0,1].map(()=>{const m=new THREE.Mesh(new THREE.RingGeometry(.9,1,64),new THREE.MeshBasicMaterial({color:0xfff0d8,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide,fog:false}));m.rotation.x=-Math.PI/2;m.position.y=3.3;scene.add(m);return m});
+// trees
+{const N=260,tf=new THREE.InstancedMesh(new THREE.ConeGeometry(4,14,7).translate(0,10,0),new THREE.MeshLambertMaterial(),N),tt=new THREE.InstancedMesh(new THREE.CylinderGeometry(.7,.9,4).translate(0,2,0),new THREE.MeshLambertMaterial({color:0x6b4423}),N),d=new THREE.Object3D(),c=new THREE.Color();
+for(let i=0;i<N;i++){let x,z,h;do{const a=rnd(0,6.283),r=rnd(70,320);x=Math.cos(a)*r;z=Math.sin(a)*r;h=th(x,z)}while(h>45);
+d.position.set(x,h,z);const s=rnd(.7,1.8);d.scale.set(s,s,s);d.updateMatrix();tf.setMatrixAt(i,d.matrix);tt.setMatrixAt(i,d.matrix);tf.setColorAt(i,c.setHSL(rnd(.25,.4),.65,rnd(.22,.4)))}
+tf.castShadow=true;scene.add(tf,tt)}
+// grass
+const GN=1800,gd=[],dm=new THREE.Object3D(),gm=new THREE.InstancedMesh(new THREE.ConeGeometry(.17,2,3).translate(0,1,0),new THREE.MeshLambertMaterial(),GN);
+{const c=new THREE.Color();for(let i=0;i<GN;i++){const a=rnd(0,6.283),r=rnd(20,85);gd.push([Math.cos(a)*r,Math.sin(a)*r,rnd(.7,1.5)]);gm.setColorAt(i,c.setHSL(rnd(.2,.3),.75,rnd(.3,.5)))}}
+gm.frustumCulled=false;scene.add(gm);
+function grass(t,bl){for(let i=0;i<GN;i++){const g=gd[i],d=Math.hypot(g[0],g[1]),w=Math.sin(t*1.7+g[0]*.08+g[1]*.05)*.09,tl=Math.min(1.35,w+bl*20/(d+6));
+dm.position.set(g[0],0,g[1]);dm.rotation.set(g[1]/d*tl,0,-g[0]/d*tl);dm.scale.set(1,g[2]*(1-.35*Math.min(1,tl)),1);dm.updateMatrix();gm.setMatrixAt(i,dm.matrix)}gm.instanceMatrix.needsUpdate=true}
+// debris
+const DN=120,dp=new Float32Array(DN*3),dv=new Float32Array(DN*3),dl=new Float32Array(DN).fill(0);let dk=0;
+const deb=new THREE.InstancedMesh(new THREE.BoxGeometry(.5,.35,.5),new THREE.MeshLambertMaterial({color:0xb59a6a}),DN);deb.frustumCulled=false;scene.add(deb);
+function debris(dt,bl){if(bl>.3){let n=Math.random()<bl*40*dt%1?1:0;n+=Math.floor(bl*40*dt);while(n-->0){const i=dk++%DN,a=rnd(0,6.283),sp=rnd(12,38);dp.set([Math.cos(a)*9,3.5,Math.sin(a)*9],i*3);dv.set([Math.cos(a)*sp,rnd(6,22),Math.sin(a)*sp],i*3);dl[i]=rnd(2,4)}}
+for(let i=0;i<DN;i++){if(dl[i]>0){dl[i]-=dt;dv[i*3+1]-=25*dt;for(let k=0;k<3;k++)dp[i*3+k]+=dv[i*3+k]*dt;if(dp[i*3+1]<.2){dp[i*3+1]=.2;dv[i*3]*=.9;dv[i*3+2]*=.9;dv[i*3+1]=0}
+dm.position.set(dp[i*3],dp[i*3+1],dp[i*3+2]);dm.rotation.set(dl[i]*7,dl[i]*5,0);dm.scale.setScalar(1)}else{dm.position.set(0,-50,0);dm.scale.setScalar(0)}dm.updateMatrix();deb.setMatrixAt(i,dm.matrix)}deb.instanceMatrix.needsUpdate=true}
+// clouds
+const cloudG=new THREE.Group();scene.add(cloudG);
+const cm=new THREE.SpriteMaterial({map:cloudT,transparent:true,opacity:.92,depthWrite:false,fog:false});
+function cluster(cx,cy,cz,sc){for(let i=0;i<7;i++){const s=new THREE.Sprite(cm),w=sc*1.3;s.position.set(cx+rnd(-.5,.5)*w,cy+rnd(-.12,.12)*w,cz+rnd(-.5,.5)*w);const q=sc*rnd(.7,1.1);s.scale.set(q,q*.6,1);cloudG.add(s)}}
+[[130,20,300,1200],[300,22,120,1300],[520,22,80,1500],[800,22,80,1700]].forEach(l=>{for(let i=0;i<l[1];i++){const a=rnd(0,6.283),r=rnd(l[2],l[3]);cluster(Math.cos(a)*r,l[0]+rnd(-30,30),Math.sin(a)*r,rnd(90,200))}});
+[240,400,560,800,1000].forEach(y=>{const a=rnd(0,6.283),r=rnd(25,55);cluster(Math.cos(a)*r,y,Math.sin(a)*r,rnd(70,110))});
+// particles
+class PS{constructor(n,map,add,ce){this.n=n;this.k=0;this.ce=ce;const f=m=>new Float32Array(n*m);
+Object.assign(this,{pos:f(3),vel:f(3),age:f(1).fill(99),life:f(1).fill(1),s0:f(1),s1:f(1),a0:f(1),dr:f(1),bu:f(1),c0:f(3),size:f(1),alpha:f(1),col:f(3),rot:f(1)});
+for(let i=0;i<n;i++)this.rot[i]=Math.random()*6.28;
+const g=this.g=new THREE.BufferGeometry(),A=(a,s)=>new THREE.BufferAttribute(a,s).setUsage(THREE.DynamicDrawUsage);
+g.setAttribute('position',A(this.pos,3));g.setAttribute('aSize',A(this.size,1));g.setAttribute('aAlpha',A(this.alpha,1));g.setAttribute('aColor',A(this.col,3));g.setAttribute('aRot',new THREE.BufferAttribute(this.rot,1));
+const p=this.pts=new THREE.Points(g,new THREE.ShaderMaterial({uniforms:{map:{value:map},sc:SC},transparent:true,depthWrite:false,blending:add?THREE.AdditiveBlending:THREE.NormalBlending,
+vertexShader:'attribute float aSize,aAlpha,aRot;attribute vec3 aColor;uniform float sc;varying float vA,vR;varying vec3 vC;void main(){vA=aAlpha;vC=aColor;vR=aRot;vec4 mv=modelViewMatrix*vec4(position,1.);gl_PointSize=min(aSize*sc/max(-mv.z,.1),700.);gl_Position=projectionMatrix*mv;}',
+fragmentShader:'uniform sampler2D map;varying float vA,vR;varying vec3 vC;void main(){vec2 c=gl_PointCoord-.5;float s=sin(vR),o=cos(vR);c=vec2(o*c.x-s*c.y,s*c.x+o*c.y)+.5;vec4 t=texture2D(map,c);gl_FragColor=vec4(vC*t.rgb,t.a*vA);}'}));
+p.frustumCulled=false;scene.add(p)}
+emit(x,y,z,vx,vy,vz,life,s0,s1,a,dr,bu,r,g,b){const i=this.k++%this.n;this.pos.set([x,y,z],i*3);this.vel.set([vx,vy,vz],i*3);this.age[i]=0;this.life[i]=life;this.s0[i]=s0;this.s1[i]=s1;this.a0[i]=a;this.dr[i]=dr;this.bu[i]=bu;this.c0.set([r,g,b],i*3)}
+update(dt){const{pos,vel,age,life,ce}=this;for(let i=0;i<this.n;i++){if(age[i]>=life[i]){this.alpha[i]=0;this.size[i]=0;continue}
+age[i]+=dt;const t=age[i]/life[i],d=Math.exp(-this.dr[i]*dt);vel[i*3]*=d;vel[i*3+1]=vel[i*3+1]*d+this.bu[i]*dt;vel[i*3+2]*=d;
+for(let k=0;k<3;k++)pos[i*3+k]+=vel[i*3+k]*dt;this.size[i]=this.s0[i]+(this.s1[i]-this.s0[i])*Math.sqrt(t);this.alpha[i]=this.a0[i]*Math.min(1,t*12)*(1-t);
+const m=sm(0,.6,t);for(let k=0;k<3;k++)this.col[i*3+k]=this.c0[i*3+k]+(ce[k]-this.c0[i*3+k])*m}
+const g=this.g.attributes;g.position.needsUpdate=g.aSize.needsUpdate=g.aAlpha.needsUpdate=g.aColor.needsUpdate=true}
+clear(){this.age.fill(99)}}
+const smoke=new PS(4500,puffT,false,[.84,.86,.9]),fire=new PS(1800,glowT,true,[1,.25,.05]),spark=new PS(500,glowT,true,[1,.3,.05]);
+// loop
+const TL=12.6;let t=0,last=performance.now(),ly=19,prevEy=0;
+const N=(r,dt)=>{const c=r*dt;let n=Math.floor(c);if(Math.random()<c-n)n++;return n};
+function loop(){requestAnimationFrame(loop);const now=performance.now(),dt=Math.min((now-last)/1000,.05);last=now;t+=dt;
+if(t>66){t=0;[smoke,fire,spark].forEach(p=>p.clear());ly=19;prevEy=0}
+const s=t-TL,y=s>0?1.4*Math.pow(s,2.2):0,v=s>0?3.08*Math.pow(s,1.2):0,thr=sm(5,12.5,t),bl=thr*Math.exp(-y/60);
+const amp=sm(6,12.5,t)*(s<0?.1:.06);R.position.set(Math.sin(t*70)*amp,PT+2.6+y,Math.cos(t*63)*amp);R.rotation.z=Math.sin(t*55)*amp*.02;
+arms.forEach((a,i)=>a.rotation.y=-sm(TL-1.6+i*.2,TL-.2+i*.2,t)*1.35);
+// flames
+const flick=.93+.07*Math.sin(t*41);let anyI=0;
+flames.forEach((f,i)=>{const I=sm(f.e[4],f.e[4]+3,t);anyI=Math.max(anyI,I);f.g.visible=I>.01;if(!f.g.visible)return;
+const len=Math.min(150,(9+36*thr)*I*(1+v*.012))*(.93+.07*Math.sin(t*47+i*2)),rr=f.e[3]*(.7+.5*thr)*(1+I*.2);
+f.ls.forEach(l=>{l.m.scale.set(rr*l.rs,len*l.ls,rr*l.rs);l.m.material.uniforms.t.value=t+i;l.m.material.uniforms.k.value=I*(.5+.5*thr)});
+if(i<5)bells[i].material.emissiveIntensity=I*1.2});
+const ey=R.position.y-2.2;
+fireLight.position.set(0,Math.max(ey-2,1.5),0);fireLight.intensity=5*thr*flick;
+eGlow.position.set(0,ey,0);eGlow.scale.setScalar((6+34*thr)*anyI*flick+.01);
+gGlow.scale.setScalar(70*bl*flick+.01);gGlow.material.opacity=.7;
+rings.forEach((r,i)=>{const q=t-(i?TL-.3:9);const on=q>0&&q<3.5;r.visible=on;if(on){r.scale.setScalar(4+q*38);r.material.opacity=.4*(1-q/3.5)*(i?1:.6)}});
+// emissions
+if(t<TL+4){for(let n=N(14*(1-sm(6,11,t))+3,dt);n-->0;){const sd=Math.random()<.5?-1:1;smoke.emit(sd*2.6,R.position.y+rnd(6,24),rnd(-1,1),sd*rnd(.5,2.5),rnd(.3,1.2),rnd(-1,1),rnd(4,7),.8,rnd(3,5),.4,.5,.4,1,1,1)}
+for(let n=N(6,dt);n-->0;){const a=rnd(0,6.283),r=rnd(6,40);smoke.emit(Math.cos(a)*r,3.4,Math.sin(a)*r,Math.cos(a)*rnd(.5,2),.2,Math.sin(a)*rnd(.5,2),8,6,14,.2,.3,.1,.95,.97,1)}}
+if(bl>.02){
+for(let n=N(bl*300,dt);n-->0;){const a=rnd(0,6.283),r=rnd(10,16),sp=rnd(10,32)*(.5+bl);smoke.emit(Math.cos(a)*r,rnd(.5,3),Math.sin(a)*r,Math.cos(a)*sp,rnd(1,6),Math.sin(a)*sp,rnd(5,9),4,rnd(18,34),rnd(.5,.85),.6,1.2,1,.85,.65)}
+for(let n=N(bl*100,dt);n-->0;){const a=rnd(0,6.283),r=rnd(4,10);smoke.emit(Math.cos(a)*r,rnd(.5,3),Math.sin(a)*r,Math.cos(a)*rnd(2,8),rnd(8,20),Math.sin(a)*rnd(2,8),rnd(5,8),5,rnd(16,26),rnd(.5,.8),.6,3,1,.75,.5)}
+for(let n=N(bl*130,dt);n-->0;){const a=rnd(0,6.283),r=rnd(8,15),sp=rnd(8,26);smoke.emit(Math.cos(a)*r,rnd(.3,1.5),Math.sin(a)*r,Math.cos(a)*sp,rnd(0,2),Math.sin(a)*sp,5,3,rnd(12,22),.7,.5,.3,.78,.63,.45)}
+for(let n=N(bl*80,dt);n-->0;){const a=rnd(0,6.283),sp=rnd(10,38);spark.emit(Math.cos(a)*8,3.4,Math.sin(a)*8,Math.cos(a)*sp,rnd(6,24),Math.sin(a)*sp,rnd(1.5,3),.6,.2,1,.2,-28,1,.65,.2)}
+for(let n=N(bl*30,dt);n-->0;){const a=rnd(0,6.283),r=rnd(6,20);spark.emit(Math.cos(a)*r,3.4,Math.sin(a)*r,rnd(-3,3),rnd(3,9),rnd(-3,3),rnd(3,5),.8,.3,.8,.3,6,1,.5,.1)}}
+if(y>2&&thr>.5){const seg=ey-prevEy;for(let n=N(240*thr,dt);n-->0;){const yy=ey-Math.random()*Math.max(seg,0);smoke.emit(rnd(-1.6,1.6),yy-rnd(0,3),rnd(-1.6,1.6),rnd(-3,3),-rnd(2,8),rnd(-3,3),rnd(9,14),3.5,rnd(16,26)+y*.02,.55,.5,0,1,.92,.85)}}
+prevEy=ey;
+flames.forEach((f,i)=>{const I=sm(f.e[4],f.e[4]+3,t);if(I<.02)return;const rs=f.e[3]/.75,ex=R.position.x+f.e[0],ez=f.e[1],eyy=R.position.y+f.e[2];
+for(let n=N(50*I*(1+.5*thr),dt);n-->0;)fire.emit(ex+rnd(-.4,.4),eyy+rnd(0,1),ez+rnd(-.4,.4),rnd(-2,2)+f.e[0]*2,-rnd(25,55)*(.3+thr)+v*.4,rnd(-2,2)+ez*2,rnd(.5,1.1),rnd(1.5,2.5)*rs,rnd(4,8)*rs,.6,1.2,0,1,.85,.4);
+for(let n=N(30*thr*I,dt);n-->0;)spark.emit(ex,eyy,ez,rnd(-8,8),-rnd(5,25)+v*.3,rnd(-8,8),rnd(1,2.4),.5,.1,1,.3,-18,1,.75,.3)});
+grass(t,bl);debris(dt,bl);
+smoke.update(dt);fire.update(dt);spark.update(dt);cloudG.rotation.y+=dt*.002;
+blinkers.forEach((b,i)=>b.visible=Math.sin(t*4+i*1.7)>0);
+// camera
+const k=1-Math.exp(-dt*(t<TL?3:7));ly+=(19+y+v*.12-ly)*k;
+const Rr=58+Math.min(y*.05,45),ang=.6+t*.012,sh=sm(6,12.5,t)*.035+(s>0?.45*Math.exp(-s/3)+.08*sm(0,2,s):0);
+camera.position.set(Math.sin(ang)*Rr+Math.sin(t*37.1)*sh,ly-8+Math.min(y*.06,60)+Math.sin(t*53.3+1)*sh,Math.cos(ang)*Rr+Math.sin(t*44.7+2)*sh);
+camera.lookAt(0,ly,0);
+const fov=50+Math.min(v*.03,8);if(Math.abs(fov-camera.fov)>.01){camera.fov=fov;camera.updateProjectionMatrix()}
+SC.value=innerHeight*renderer.getPixelRatio()/(2*Math.tan(fov*Math.PI/360));
+sky.position.copy(camera.position);
+renderer.render(scene,camera)}
+resize();loop();
+</script></body></html>
